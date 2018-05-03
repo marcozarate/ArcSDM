@@ -140,7 +140,7 @@ class rastersom(object):
     def __init__(self):
         """Define the tool (tool name is the name of the class)."""
         self.label = "SOM - Linear distance from BMU"
-        self.description = "Returns raster of linear distance from SOM BMU of input raster"
+        self.description = "Returns rasters of BMU and linear distance from SOM BMU of input raster"
         self.canRunInBackground = False
         self.category = "SOM"
         
@@ -193,11 +193,19 @@ class rastersom(object):
         direction="Output")
         paramOutputraster.value = "%Workspace%\SOMdistance"
         
+        paramOutputbmuraster = arcpy.Parameter(
+        displayName="Output BMU raster",
+        name="outputbmuraster",
+        datatype="DERasterDataset",
+        parameterType="Required",
+        direction="Output")
+        paramOutputbmuraster.value = "%Workspace%\SOM_BMU"
         
         
         
         
-        params = [paramInput, paramSomsize, paramIterations, paramLearningrate, paramSigma, paramOutputraster]
+        
+        params = [paramInput, paramSomsize, paramIterations, paramLearningrate, paramSigma, paramOutputraster, paramOutputbmuraster]
         return params
 
         

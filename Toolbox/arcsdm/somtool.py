@@ -44,8 +44,8 @@ def somtrain(somsize, depth, data, iterations):
     #vaihdetaan raster_array [x][y][n] tyyppiseksi on (n x y)
     #poistetaan taulukosta kokonaan ulottuvuus x
     #iterations = 100;
-    #som.train_batch(datachain, iterations);
-    som.train_random(datachain, iterations);
+    som.train_batch(datachain, iterations);
+    #som.train_random(datachain, iterations);
     
     endtime = time.time()
     elapsed = endtime - starttime;
@@ -69,6 +69,7 @@ def execute(self, parameters, messages):
     dlearningrate = parameters[4].value; # Amount of iterations
 
     output_rastername = parameters[5].valueAsText
+    bmurastername = parameters[6].valueAsText
     
     
 
@@ -96,9 +97,9 @@ def execute(self, parameters, messages):
     myprint ("\n\nStarting training of the SOM network...")
     starttime = time.time();
 
-    #vaihdetaan raster_array [x][y][n] tyyppiseksi on (n x y)
+    #vaihdetaan raster_array [x][y][n] tyyppiseksi. Nyt on (n x y)
     raster_array2 = numpy.swapaxes(raster_array, 0,2)
-
+    
     #poistetaan taulukosta kokonaan ulottuvuus x
     #raster_datachain = raster_array2.reshape(len(raster_array2)*len(raster_array2[1]),-1)
     #myprint ("raster_datachain: " + str(raster_datachain.shape));
@@ -147,6 +148,9 @@ def execute(self, parameters, messages):
     #uusi = numpy.zeros(( len(raster_array2), len(raster_array2[0]),len(raster_array)))
 
     uusi = numpy.zeros(( len(raster_array2), len(raster_array2[0]),1))
+    
+    #This holds BMU raster
+    bmumap  = numpy.zeros(( len(raster_array2), len(raster_array2[0]),len(raster_array)))
 
     #iteroidaan
 
@@ -162,7 +166,7 @@ def execute(self, parameters, messages):
     #elapsed = endtime - starttime;            
     #myprint ("  Result: %s ... took %s seconds\n "%(qemap, (math.trunc(elapsed))));            
                 
-    #myprint (str(qemap.shape));
+    myprint (str(bmumap.shape));
 
     myprint ("\n\nFinding BMU from input rasterstack and calculating distance...");
     starttime = time.time();
@@ -173,7 +177,12 @@ def execute(self, parameters, messages):
             a1 = raster_array2[i][j];
             w = somfinal.winner( a1 );
             
+            #a2 now holds the BMU vector
             a2 = somfinal.weights[ w[0],w[1]  ]
+            
+            #Store bmu in bmumap
+            bmumap[i][j] = a2;
+            myprint ("bmu in: " + str(bmumap[i][j]));
             #uusi[i][j] = a2[0]; 
             uusi[i][j] = distance(a2,a1);
             if (i % 50 == 0 and printed == 0 and i != 0):
@@ -184,7 +193,9 @@ def execute(self, parameters, messages):
                 ri = random.randint(0,i-1);
                 rj = random.randint(0,len(raster_array2[0]-1));
                 myprint ("  ... %s/%s rows processed (chunk took %s seconds). \n              Have a random result while waiting: uusi[%s][%s]=%s"%(i, len(raster_array2), str(math.trunc(elapsed)), ri, rj, str(uusi[ri][rj]) ));            
-                #myprint (str(a2));
+                myprint (str(a2));
+                myprint (str(bmumap.shape));
+
                 starttime = time.time();
                 #if (j % 500 == 0):
                 #myprint ("i:%s j:%s a1:%s a2:%s tulos:%s "%(i,j,a1,a2,str(uusi[i][j])))
@@ -215,6 +226,8 @@ def execute(self, parameters, messages):
 
 
     numero4 = numpy.delete(numero4, numpy.s_[1:], 0);
+    
+    bmurastermap = numpy.swapaxes(bmumap, 0,2)
 
 
     mx = rasteri.extent.XMin + 0 * rasteri.meanCellWidth
@@ -228,13 +241,19 @@ def execute(self, parameters, messages):
     # Overwrite
     arcpy.env.overwriteOutput = True
     myRasterBlock = arcpy.NumPyArrayToRaster(numero4, arcpy.Point(mx, my),rasteri.meanCellWidth, rasteri.meanCellHeight);
-
+    myprint (str(bmurastermap))
+    myBmuRasterBlock = arcpy.NumPyArrayToRaster(bmurastermap, arcpy.Point(mx, my),rasteri.meanCellWidth, rasteri.meanCellHeight);
+    
     myprint ("Output rastername: %s"% (output_rastername ));
+    myprint ("Output bmurastername: %s"% (bmurastername));
+    
     #myRasterBlock.save("d:\\arcgis\\database.gdb\\tulos");
     myRasterBlock.save(output_rastername);
+    myBmuRasterBlock.save(bmurastername);
 
     arcpy.SetParameter(1, myRasterBlock)    ;
-
+    arcpy.SetParameter(2, myBmuRasterBlock)    ;
+    
                 
 
     #myprint (elapsed); 
